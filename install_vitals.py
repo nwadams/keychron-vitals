@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import shutil
 import subprocess
+import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parent
 HOME = Path.home()
@@ -16,7 +17,13 @@ UNIT = HOME / '.config/systemd/user/keychron-battery.service'
 RULE = '70-keychron-m3-battery.rules'
 IMPORT = "import { queryKeychronBattery } from './keychronBattery.js';"
 HOOK = "    _queryBattery(callback) {"
-CALL = "\n        queryKeychronBattery(callback); // keychron-battery integration"
+LEGACY_CALL = "\n        queryKeychronBattery(callback); // keychron-battery integration"
+CALL = """
+        const keychronSelected = this._settings.get_int('battery-slot') === 8;
+        queryKeychronBattery(callback, keychronSelected); // keychron-battery integration
+        if (keychronSelected)
+            return;"""
+BATTERY_LABEL = 'Keychron M3 Lite'
 
 
 def run(*args, **kwargs):
@@ -27,6 +34,21 @@ def install_extension(source, target):
     text = (source / 'sensors.js').read_text()
     if HOOK not in text or "import GLib from 'gi://GLib';" not in text:
         raise RuntimeError('Unsupported Vitals version: battery hook not found; no files changed')
+    ui = (source / 'prefs.ui').read_text()
+    root = ET.fromstring(ui)
+    combo = root.find(".//object[@id='battery-slot']/items")
+    if combo is None:
+        raise RuntimeError('Unsupported Vitals version: battery selector not found; no files changed')
+    labels = [item.text for item in combo.findall('item')]
+    expected = ['BAT0', 'BAT1', 'BAT2', 'BATT', 'CMB0', 'CMB1', 'CMB2', 'macsmc-battery']
+    if labels not in (expected, expected + [BATTERY_LABEL]):
+        raise RuntimeError('Unsupported Vitals battery selector layout; no files changed')
+    if labels == expected:
+        anchor = '<item translatable="yes">macsmc-battery</item>'
+        if ui.count(anchor) != 1:
+            raise RuntimeError('Unsupported Vitals battery selector markup; no files changed')
+        ui = ui.replace(anchor, anchor + '\n                  <item>Keychron M3 Lite</item>', 1)
+    text = text.replace(LEGACY_CALL, '')
     if IMPORT not in text:
         text = text.replace("import GLib from 'gi://GLib';", "import GLib from 'gi://GLib';\n" + IMPORT, 1)
     if CALL not in text:
@@ -34,6 +56,7 @@ def install_extension(source, target):
     if source != target:
         shutil.copytree(source, target, dirs_exist_ok=True)
     (target / 'sensors.js').write_text(text)
+    (target / 'prefs.ui').write_text(ui)
     shutil.copy2(ROOT / 'vitals/keychronBattery.js', target / 'keychronBattery.js')
 
 
@@ -98,6 +121,10 @@ def activate():
     if 'settings' not in record:
         record['settings'] = {'show_battery': prefs.get_boolean('show-battery'), 'added_pin': KEY not in pins}
         (STATE / 'install.json').write_text(json.dumps(record))
+    if 'battery_slot' not in record['settings']:
+        record['settings']['battery_slot'] = prefs.get_int('battery-slot')
+        (STATE / 'install.json').write_text(json.dumps(record))
+    prefs.set_int('battery-slot', 8)
     prefs.set_boolean('show-battery', True)
     if KEY not in pins:
         prefs.set_strv('hot-sensors', [k for k in pins if k != '_default_icon_'] + [KEY])
@@ -120,6 +147,8 @@ def uninstall():
         if record['settings']['added_pin']:
             pins = [k for k in prefs.get_strv('hot-sensors') if k != KEY]
             prefs.set_strv('hot-sensors', pins or ['_default_icon_'])
+        if 'battery_slot' in record['settings']:
+            prefs.set_int('battery-slot', record['settings']['battery_slot'])
         prefs.set_boolean('show-battery', record['settings']['show_battery'])
         Gio.Settings.sync()
     shutil.rmtree(EXTENSION)

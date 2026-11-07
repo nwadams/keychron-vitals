@@ -91,12 +91,21 @@ class BatteryTests(unittest.TestCase):
             source = Path(temporary) / 'source'
             source.mkdir()
             (source / 'sensors.js').write_text("import GLib from 'gi://GLib';\nclass Sensors {\n    _queryBattery(callback) {\n    }\n}\n")
+            (source / 'prefs.ui').write_text('<interface><object id="battery-slot"><items>' +
+                ''.join('<item translatable="yes">' + name + '</item>' for name in
+                    ['BAT0', 'BAT1', 'BAT2', 'BATT', 'CMB0', 'CMB1', 'CMB2', 'macsmc-battery']) +
+                '</items></object></interface>')
             target = Path(temporary) / 'extension'
             installer.install_extension(source, target)
+            # Upgrade a previous installation containing the original rows-only hook.
+            patched = (target / 'sensors.js').read_text()
+            (target / 'sensors.js').write_text(patched.replace(installer.CALL, installer.LEGACY_CALL))
+            installer.install_extension(target, target)
             installer.install_extension(target, target)
             text = (target / 'sensors.js').read_text()
             self.assertEqual(text.count(installer.CALL), 1)
             self.assertEqual(text.count(installer.IMPORT), 1)
+            self.assertEqual((target / 'prefs.ui').read_text().count('<item>Keychron M3 Lite</item>'), 1)
 
     def test_installed_vitals_patch(self):
         source = Path('/usr/share/gnome-shell/extensions/Vitals@CoreCoding.com')
@@ -109,6 +118,7 @@ class BatteryTests(unittest.TestCase):
             text = (target / 'sensors.js').read_text()
             self.assertEqual(text.count(installer.CALL), 1)
             self.assertEqual(text.count(installer.IMPORT), 1)
+            self.assertEqual((target / 'prefs.ui').read_text().count('<item>Keychron M3 Lite</item>'), 1)
 
     @unittest.skipUnless(shutil.which('gjs'), 'GJS not installed')
     def test_real_gjs_reader(self):

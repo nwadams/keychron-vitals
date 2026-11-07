@@ -24,7 +24,9 @@ cd keychron-vitals
 Run the installer **as your desktop user**, in a normal host terminal. It invokes
 sudo only to install/reload a device access rule. Log out and back in afterward
 to load the local Vitals extension. The installer enables Battery and pins
-**Keychron M3 Lite** while preserving your other pinned sensors.
+**Keychron M3 Lite** while preserving your other pinned sensors. It also selects
+**Keychron M3 Lite** under Battery Preferences → Display Battery, so the collapsed
+Battery summary shows the mouse percentage.
 
 See **[INSTALL.md](INSTALL.md)** for dependencies, verification, troubleshooting,
 updates, and removal. Keep the checkout at its installed path: the service runs
@@ -54,7 +56,8 @@ time out.
    status requests (`B3/03` receiver state; `B3/06` battery).
 2. `battery_service.py` writes `$XDG_RUNTIME_DIR/keychron-battery/status.json`
    atomically with user-only permissions.
-3. `vitals/keychronBattery.js` adds percentage and state rows to Vitals Battery.
+3. `vitals/keychronBattery.js` adds percentage and state rows to Vitals Battery
+   and supplies its summary when Keychron is selected.
 4. `install_vitals.py` makes a local copy of your installed Vitals extension,
    adds the reader, and configures the service and pinned sensor.
 

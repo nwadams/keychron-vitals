@@ -31,12 +31,14 @@ export function sensorValues(status, now = Date.now() / 1000) {
     return [reading.battery_percent / 100, `${state} · ${reading.connection}${cached}`];
 }
 
-export function queryKeychronBattery(callback) {
+export function queryKeychronBattery(callback, displaySummary = false) {
     const path = GLib.build_filenamev([GLib.get_user_runtime_dir(), 'keychron-battery', 'status.json']);
     const emit = status => {
         const [percentage, state] = sensorValues(status);
         callback('Keychron M3 Lite', percentage, 'battery', 'percent');
         callback('Keychron M3 Lite State', state, 'battery', 'string');
+        if (displaySummary)
+            callback('battery', percentage, 'battery-group', 'percent');
     };
     readStatus(path).then(contents => {
         emit(JSON.parse(contents));

@@ -18,20 +18,23 @@ equal(sensorValues({...sample, reading: {...sample.reading, battery_percent: 0}}
 // Exercise asynchronous file IO and fallback, as used in GNOME Shell.
 const path = GLib.build_filenamev([GLib.get_user_runtime_dir(), 'keychron-battery', 'status.json']);
 GLib.mkdir_with_parents(GLib.path_get_dirname(path), 0o700);
-function query() {
+function query(summary = false) {
     return new Promise(resolve => {
         const values = [];
         queryKeychronBattery((...args) => {
             values.push(args);
-            if (values.length === 2) resolve(values);
-        });
+            if (values.length === (summary ? 3 : 2)) resolve(values);
+        }, summary);
     });
 }
 const current = {...sample, observed_at: Date.now()/1000, updated_at: Date.now()/1000};
 GLib.file_set_contents(path, JSON.stringify(current));
 equal((await query())[0], ['Keychron M3 Lite', 0.08, 'battery', 'percent']);
+equal((await query(true))[2], ['battery', 0.08, 'battery-group', 'percent']);
 GLib.file_set_contents(path, '{broken');
 equal((await query())[0][1], null);
+equal((await query(true))[2], ['battery', null, 'battery-group', 'percent']);
 Gio.File.new_for_path(path).delete(null);
 equal((await query())[0][1], null);
+equal((await query(true))[2], ['battery', null, 'battery-group', 'percent']);
 print('GJS: valid, zero, stale, future, malformed and missing readings passed');

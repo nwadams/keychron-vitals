@@ -47,7 +47,9 @@ Do not run the entire installer with sudo. It performs these changes:
   reloads/retriggers udev so the active local user gets HID access. The rule
   targets Link-KM mouse interface 01 and the wired M3 Lite USB ID.
 - Enables Vitals Battery and adds `_battery_keychron_m3_lite_` to its pinned
-  sensors. Other pinned sensors are retained.
+  sensors. Other pinned sensors are retained. It adds and selects **Keychron M3
+  Lite** in Battery Preferences → Display Battery, which makes the collapsed
+  Battery summary show the mouse percentage.
 
 The receiver vendor collection shares a HID interface with additional reports;
 as with other HID utilities, granting device access grants access to that
@@ -59,7 +61,10 @@ No reboot is required. If HID access still fails, reconnect the receiver.
 
 In Vitals, open **Battery**. You should see **Keychron M3 Lite** and
 **Keychron M3 Lite State**. The percentage is automatically pinned to the top
-bar; click its Vitals row to change that preference.
+bar; click its Vitals row to change that preference. Battery Preferences →
+Display Battery includes **Keychron M3 Lite**; selecting it uses the mouse
+percentage for the Battery summary. Built-in battery choices retain their
+existing behavior.
 
 For file preparation without sudo, D-Bus, or service activation:
 
@@ -110,6 +115,11 @@ the extension from your home directory with `gnome-extensions info`. Enable
 Battery in Vitals preferences. The integration is inside Vitals, so it must be
 enabled for the row to appear.
 
+**Battery summary says “No Data” while the mouse row has a percentage:** Update
+and rerun the installer, then log out/in. In Battery Preferences → Display
+Battery select **Keychron M3 Lite**. BAT0/BAT1/BAT2 refer to built-in batteries,
+not the mouse. An unavailable or expired mouse reading displays **N/A**.
+
 **Systemd or HID devices unavailable:** Run the installer and service on your
 host, outside a container or restricted coding session.
 
@@ -141,7 +151,7 @@ verify compatibility. Uninstallation restores the original local copy, if any.
 
 The uninstaller stops/disables the service, removes its unit and custom udev
 rule, restores the previous local Vitals copy (or removes the local override),
-and restores the previous Battery visibility. It removes its own pinned sensor
+and restores the previous Battery visibility and display battery selection. It removes its own pinned sensor
 if installation added it. Log out and back in afterward.
 
 If you only staged files and never activated, use the same uninstaller. When
