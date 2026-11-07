@@ -180,3 +180,9 @@ After changing the rule, reload/retrigger udev or reconnect the devices.
 The keyboard service writes `$XDG_RUNTIME_DIR/keychron-battery/keyboard-status.json`.
 Check that file and `journalctl --user -u keychron-keyboard-battery.service` if
 keyboard rows are N/A. Existing mouse readings are independent.
+
+## Flashing or restoring keyboard firmware
+
+Use the dedicated [flashing and rollback guide](FLASHING.md). It includes
+build commands, a full internal-flash backup, verified flashing, battery tests,
+and restoration of your original firmware. The app installer never flashes it.

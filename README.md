@@ -5,7 +5,7 @@ Linux, from the console or in the Vitals GNOME Shell extension. Vitals can
 show both percentages in the top bar and either device in its Battery summary.
 
 The mouse works with stock firmware. **The keyboard requires the experimental
-custom firmware patch** described in [the keyboard guide](research/KEYBOARD.md).
+custom firmware patch** described in [the flashing and rollback guide](FLASHING.md).
 The installer never flashes firmware.
 
 ![Vitals Battery menu showing Keychron K2 HE at 82% and Keychron M3 Lite at 90%](docs/images/vitals-batteries.png)
@@ -60,6 +60,13 @@ expired, malformed or stopped-service data displays N/A.
 
 See [INSTALL.md](INSTALL.md) for setup, updates, verification and removal.
 Keep the checkout at its installed path; the services use absolute paths.
+
+## Flashing and rollback
+
+Follow [FLASHING.md](FLASHING.md) for the complete K2 HE ANSI procedure:
+compile the pinned source, enter DFU, back up internal flash, prepare a preserving
+image, flash and verify it, then test battery reports. The same guide includes
+byte-for-byte rollback to your original backup and recovery notes.
 
 ## Supported hardware
 

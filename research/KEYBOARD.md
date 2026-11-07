@@ -1,5 +1,8 @@
 # K2 HE battery telemetry investigation
 
+For step-by-step build, flashing, verification and rollback commands, see
+[the flashing and rollback guide](../FLASHING.md).
+
 The user's keyboard is a **K2 HE ANSI**, USB `3434:0e20`, paired with a
 Link-KM `3434:d026` receiver. Stock keyboard firmware observed locally:
 `v1.1.0 2024-10-31-09:00:44`; receiver: `0.1.1 Feb 18 2025 14:54:01`.
