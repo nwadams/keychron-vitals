@@ -79,6 +79,7 @@ Details, build/flash/recovery instructions and limitations are in
 the custom A4 battery protocol and wireless push approach used for this K2 HE
 port. See [our Keyboard Companion fork](https://github.com/nwadams/keyboard-companion)
 for the Linux diagnostic, HID report-length fix and K2 HE validation contribution.
+The contribution is submitted as [upstream PR #1](https://github.com/OutersGIT/keyboard-companion/pull/1).
 The Windows tray app was not tested here. Do not flash K10 HE/Q1 HE binaries
 onto a K2 HE.
 
