@@ -101,11 +101,14 @@ class BatteryTests(unittest.TestCase):
             patched = (target / 'sensors.js').read_text()
             (target / 'sensors.js').write_text(patched.replace(installer.CALL, installer.LEGACY_CALL))
             installer.install_extension(target, target)
+            (target / 'sensors.js').write_text((target / 'sensors.js').read_text().replace(installer.CALL, installer.MOUSE_CALL))
+            installer.install_extension(target, target)
             installer.install_extension(target, target)
             text = (target / 'sensors.js').read_text()
             self.assertEqual(text.count(installer.CALL), 1)
             self.assertEqual(text.count(installer.IMPORT), 1)
             self.assertEqual((target / 'prefs.ui').read_text().count('<item>Keychron M3 Lite</item>'), 1)
+            self.assertEqual((target / 'prefs.ui').read_text().count('<item>Keychron K2 HE</item>'), 1)
 
     def test_installed_vitals_patch(self):
         source = Path('/usr/share/gnome-shell/extensions/Vitals@CoreCoding.com')
@@ -119,6 +122,7 @@ class BatteryTests(unittest.TestCase):
             self.assertEqual(text.count(installer.CALL), 1)
             self.assertEqual(text.count(installer.IMPORT), 1)
             self.assertEqual((target / 'prefs.ui').read_text().count('<item>Keychron M3 Lite</item>'), 1)
+            self.assertEqual((target / 'prefs.ui').read_text().count('<item>Keychron K2 HE</item>'), 1)
 
     @unittest.skipUnless(shutil.which('gjs'), 'GJS not installed')
     def test_real_gjs_reader(self):

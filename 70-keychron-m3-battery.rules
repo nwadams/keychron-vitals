@@ -2,3 +2,8 @@
 # Link-KM vendor mouse interface observed on this receiver: USB interface 01.
 ACTION=="add|change", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3434", ATTRS{idProduct}=="d026", ENV{ID_USB_INTERFACE_NUM}=="01", TAG+="uaccess"
 ACTION=="add|change", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3434", ATTRS{idProduct}=="d04e", TAG+="uaccess"
+
+# Link-KM raw32 keyboard vendor collection, observed USB interface 03.
+ACTION=="add|change", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3434", ATTRS{idProduct}=="d026", ENV{ID_USB_INTERFACE_NUM}=="03", TAG+="uaccess"
+# K2 HE ANSI wired keyboard (patched firmware required for battery reports).
+ACTION=="add|change", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3434", ATTRS{idProduct}=="0e20", TAG+="uaccess"

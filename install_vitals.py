@@ -11,19 +11,27 @@ ROOT = Path(__file__).resolve().parent
 HOME = Path.home()
 UUID = 'Vitals@CoreCoding.com'
 KEY = '_battery_keychron_m3_lite_'
+KEYBOARD_KEY = '_battery_keychron_k2_he_'
 STATE = HOME / '.local/state/keychron-battery'
 EXTENSION = HOME / '.local/share/gnome-shell/extensions' / UUID
 UNIT = HOME / '.config/systemd/user/keychron-battery.service'
+KEYBOARD_UNIT = HOME / '.config/systemd/user/keychron-keyboard-battery.service'
 RULE = '70-keychron-m3-battery.rules'
 IMPORT = "import { queryKeychronBattery } from './keychronBattery.js';"
 HOOK = "    _queryBattery(callback) {"
 LEGACY_CALL = "\n        queryKeychronBattery(callback); // keychron-battery integration"
-CALL = """
+MOUSE_CALL = """
         const keychronSelected = this._settings.get_int('battery-slot') === 8;
         queryKeychronBattery(callback, keychronSelected); // keychron-battery integration
         if (keychronSelected)
             return;"""
+CALL = """
+        const keychronSlot = this._settings.get_int('battery-slot');
+        queryKeychronBattery(callback, keychronSlot); // keychron-battery integration
+        if (keychronSlot === 8 || keychronSlot === 9)
+            return;"""
 BATTERY_LABEL = 'Keychron M3 Lite'
+KEYBOARD_LABEL = 'Keychron K2 HE'
 
 
 def run(*args, **kwargs):
@@ -41,14 +49,17 @@ def install_extension(source, target):
         raise RuntimeError('Unsupported Vitals version: battery selector not found; no files changed')
     labels = [item.text for item in combo.findall('item')]
     expected = ['BAT0', 'BAT1', 'BAT2', 'BATT', 'CMB0', 'CMB1', 'CMB2', 'macsmc-battery']
-    if labels not in (expected, expected + [BATTERY_LABEL]):
+    if labels not in (expected, expected + [BATTERY_LABEL], expected + [BATTERY_LABEL, KEYBOARD_LABEL]):
         raise RuntimeError('Unsupported Vitals battery selector layout; no files changed')
     if labels == expected:
         anchor = '<item translatable="yes">macsmc-battery</item>'
         if ui.count(anchor) != 1:
             raise RuntimeError('Unsupported Vitals battery selector markup; no files changed')
         ui = ui.replace(anchor, anchor + '\n                  <item>Keychron M3 Lite</item>', 1)
-    text = text.replace(LEGACY_CALL, '')
+    if KEYBOARD_LABEL not in labels:
+        anchor = '<item>Keychron M3 Lite</item>'
+        ui = ui.replace(anchor, anchor + '\n                  <item>Keychron K2 HE</item>', 1)
+    text = text.replace(LEGACY_CALL, '').replace(MOUSE_CALL, '')
     if IMPORT not in text:
         text = text.replace("import GLib from 'gi://GLib';", "import GLib from 'gi://GLib';\n" + IMPORT, 1)
     if CALL not in text:
@@ -95,6 +106,8 @@ UMask=0077
 [Install]
 WantedBy=graphical-session.target
 ''')
+    keyboard_unit = UNIT.read_text().replace('Keychron M3 Lite battery bridge', 'Keychron K2 HE battery bridge').replace('battery_service.py', 'keyboard_service.py')
+    KEYBOARD_UNIT.write_text(keyboard_unit)
 
 
 def settings():
@@ -124,16 +137,21 @@ def activate():
     if 'battery_slot' not in record['settings']:
         record['settings']['battery_slot'] = prefs.get_int('battery-slot')
         (STATE / 'install.json').write_text(json.dumps(record))
-    prefs.set_int('battery-slot', 8)
+    record['settings'].setdefault('added_keyboard_pin', KEYBOARD_KEY not in pins)
+    (STATE / 'install.json').write_text(json.dumps(record))
+    prefs.set_int('battery-slot', 9)
     prefs.set_boolean('show-battery', True)
     if KEY not in pins:
         prefs.set_strv('hot-sensors', [k for k in pins if k != '_default_icon_'] + [KEY])
+    pins = list(prefs.get_strv('hot-sensors'))
+    if KEYBOARD_KEY not in pins:
+        prefs.set_strv('hot-sensors', [k for k in pins if k != '_default_icon_'] + [KEYBOARD_KEY])
     Gio.Settings.sync()
     run('systemctl', '--user', 'daemon-reload')
-    run('systemctl', '--user', 'enable', '--now', 'keychron-battery.service')
+    run('systemctl', '--user', 'enable', '--now', 'keychron-battery.service', 'keychron-keyboard-battery.service')
     run('gnome-extensions', 'enable', UUID)
     print('Installed and service started. Log out and back in to load the local Vitals copy.')
-    print('Vitals → Battery → Keychron M3 Lite is pinned to the top bar.')
+    print('Vitals → Battery → Keychron M3 Lite and Keychron K2 HE are pinned to the top bar.')
 
 
 def uninstall():
@@ -142,8 +160,12 @@ def uninstall():
         raise RuntimeError('No installation record found')
     record = json.loads(record_path.read_text())
     subprocess.run(['systemctl', '--user', 'disable', '--now', 'keychron-battery.service'], text=True)
+    subprocess.run(['systemctl', '--user', 'disable', '--now', 'keychron-keyboard-battery.service'], text=True)
     if 'settings' in record:
         Gio, prefs = settings()
+        if record['settings'].get('added_keyboard_pin'):
+            pins = [k for k in prefs.get_strv('hot-sensors') if k != KEYBOARD_KEY]
+            prefs.set_strv('hot-sensors', pins or ['_default_icon_'])
         if record['settings']['added_pin']:
             pins = [k for k in prefs.get_strv('hot-sensors') if k != KEY]
             prefs.set_strv('hot-sensors', pins or ['_default_icon_'])
@@ -155,6 +177,7 @@ def uninstall():
     if record['had_local_extension']:
         shutil.copytree(STATE / 'extension-backup', EXTENSION)
     UNIT.unlink(missing_ok=True)
+    KEYBOARD_UNIT.unlink(missing_ok=True)
     run('systemctl', '--user', 'daemon-reload')
     run('sudo', 'rm', '-f', '/etc/udev/rules.d/' + RULE)
     run('sudo', 'udevadm', 'control', '--reload-rules')

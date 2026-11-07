@@ -1,0 +1,41 @@
+{
+  "interfaces": [
+    {
+      "path": "/dev/hidraw7",
+      "usb_id": "3434:0e20",
+      "name": "Keychron Keychron K2 HE"
+    },
+    {
+      "path": "/dev/hidraw4",
+      "usb_id": "3434:d026",
+      "name": "Keychron  Keychron Link-KM"
+    }
+  ],
+  "readings": [
+    {
+      "battery_percent": 99,
+      "voltage_mv": 4098,
+      "charging_state": 1,
+      "transport": 1,
+      "model_id": 0,
+      "protocol": "Keyboard Companion custom A4; requires modified firmware",
+      "path": "/dev/hidraw7",
+      "observed_at": 1794076930.9212563
+    }
+  ],
+  "receiver_slots": [
+    {
+      "slot": 0,
+      "usb_id": "3434:0e20",
+      "connected": false
+    },
+    {
+      "slot": 2,
+      "usb_id": "3434:d04e",
+      "connected": true
+    }
+  ],
+  "errors": [],
+  "receiver_firmware": "0.1.1 Feb 18 2025 14:54:01",
+  "battery_percent": 99
+}

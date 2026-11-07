@@ -1,4 +1,4 @@
-// Local M3 Lite integration. Hardware polling runs outside GNOME Shell.
+// Local M3 Lite and K2 HE integration. Hardware polling runs outside GNOME Shell.
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 
@@ -16,7 +16,7 @@ function readStatus(path) {
     });
 }
 
-export function sensorValues(status, now = Date.now() / 1000) {
+export function sensorValues(status, now = Date.now() / 1000, device = 'mouse') {
     const reading = status?.reading;
     const age = now - status?.observed_at;
     const valid = status?.version === 1 && Number.isFinite(status.observed_at) &&
@@ -25,22 +25,29 @@ export function sensorValues(status, now = Date.now() / 1000) {
         Number.isInteger(reading?.battery_percent) && reading.battery_percent >= 0 &&
         reading.battery_percent <= 100 && typeof reading.charging === 'boolean';
     if (!valid)
-        return [null, 'Unavailable — wake mouse or check service'];
-    const state = reading.charging ? 'Charging' : 'Discharging';
+        return [null, `Unavailable — wake ${device} or check service`];
+    const state = reading.charging_state === 2 ? 'Full' : reading.charging ? 'Charging' : 'Discharging';
+    const voltage = device === 'keyboard' && Number.isFinite(reading.voltage_mv) ? ` · ${reading.voltage_mv} mV` : '';
     const cached = status.updated_at > status.observed_at ? ' · last known' : '';
-    return [reading.battery_percent / 100, `${state} · ${reading.connection}${cached}`];
+    return [reading.battery_percent / 100, `${state} · ${reading.connection}${voltage}${cached}`];
 }
 
 export function queryKeychronBattery(callback, displaySummary = false) {
-    const path = GLib.build_filenamev([GLib.get_user_runtime_dir(), 'keychron-battery', 'status.json']);
-    const emit = status => {
-        const [percentage, state] = sensorValues(status);
-        callback('Keychron M3 Lite', percentage, 'battery', 'percent');
-        callback('Keychron M3 Lite State', state, 'battery', 'string');
-        if (displaySummary)
-            callback('battery', percentage, 'battery-group', 'percent');
-    };
-    readStatus(path).then(contents => {
-        emit(JSON.parse(contents));
-    }).catch(() => emit(null));
+    // The boolean form remains compatible with the earlier mouse-only hook.
+    const selected = displaySummary === true ? 8 : displaySummary;
+    const devices = [
+        {label: 'Keychron M3 Lite', file: 'status.json', slot: 8, kind: 'mouse'},
+        {label: 'Keychron K2 HE', file: 'keyboard-status.json', slot: 9, kind: 'keyboard'},
+    ];
+    return Promise.all(devices.map(device => {
+        const path = GLib.build_filenamev([GLib.get_user_runtime_dir(), 'keychron-battery', device.file]);
+        const emit = status => {
+            const [percentage, state] = sensorValues(status, Date.now() / 1000, device.kind);
+            callback(device.label, percentage, 'battery', 'percent');
+            callback(device.label + ' State', state, 'battery', 'string');
+            if (selected === device.slot)
+                callback('battery', percentage, 'battery-group', 'percent');
+        };
+        return readStatus(path).then(contents => emit(JSON.parse(contents))).catch(() => emit(null));
+    }));
 }

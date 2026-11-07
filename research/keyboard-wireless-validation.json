@@ -1,0 +1,86 @@
+{
+  "interfaces": [
+    {
+      "path": "/dev/hidraw4",
+      "usb_id": "3434:d026",
+      "name": "Keychron  Keychron Link-KM"
+    }
+  ],
+  "readings": [
+    {
+      "battery_percent": 85,
+      "voltage_mv": 3992,
+      "charging_state": 0,
+      "transport": 4,
+      "model_id": 0,
+      "protocol": "Keyboard Companion custom A4; requires modified firmware",
+      "path": "/dev/hidraw4",
+      "observed_at": 1794076838.7287529
+    },
+    {
+      "battery_percent": 85,
+      "voltage_mv": 3992,
+      "charging_state": 0,
+      "transport": 4,
+      "model_id": 0,
+      "protocol": "Keyboard Companion custom A4; requires modified firmware",
+      "path": "/dev/hidraw4",
+      "observed_at": 1794076840.7278821
+    },
+    {
+      "battery_percent": 85,
+      "voltage_mv": 3989,
+      "charging_state": 0,
+      "transport": 4,
+      "model_id": 0,
+      "protocol": "Keyboard Companion custom A4; requires modified firmware",
+      "path": "/dev/hidraw4",
+      "observed_at": 1794076842.7259452
+    },
+    {
+      "battery_percent": 85,
+      "voltage_mv": 3989,
+      "charging_state": 0,
+      "transport": 4,
+      "model_id": 0,
+      "protocol": "Keyboard Companion custom A4; requires modified firmware",
+      "path": "/dev/hidraw4",
+      "observed_at": 1794076844.7297633
+    },
+    {
+      "battery_percent": 84,
+      "voltage_mv": 3987,
+      "charging_state": 0,
+      "transport": 4,
+      "model_id": 0,
+      "protocol": "Keyboard Companion custom A4; requires modified firmware",
+      "path": "/dev/hidraw4",
+      "observed_at": 1794076846.727967
+    },
+    {
+      "battery_percent": 84,
+      "voltage_mv": 3987,
+      "charging_state": 0,
+      "transport": 4,
+      "model_id": 0,
+      "protocol": "Keyboard Companion custom A4; requires modified firmware",
+      "path": "/dev/hidraw4",
+      "observed_at": 1794076848.7276647
+    }
+  ],
+  "receiver_slots": [
+    {
+      "slot": 0,
+      "usb_id": "3434:0e20",
+      "connected": true
+    },
+    {
+      "slot": 2,
+      "usb_id": "3434:d04e",
+      "connected": true
+    }
+  ],
+  "errors": [],
+  "receiver_firmware": "0.1.1 Feb 18 2025 14:54:01",
+  "battery_percent": 84
+}

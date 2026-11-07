@@ -1,19 +1,34 @@
 # Keychron Vitals
 
-Show your **Keychron M3 Lite mouse battery** in the **Battery** section of the
-Vitals GNOME Shell extension and pin its percentage to the system top bar.
+Read **Keychron M3 Lite mouse** and **K2 HE ANSI keyboard** battery levels on
+Linux, from the console or in the Vitals GNOME Shell extension. Vitals can
+show both percentages in the top bar and either device in its Battery summary.
 
-The app polls the mouse every 30 seconds in a systemd user service. Vitals reads
-a small local JSON snapshot asynchronously, so USB queries never block GNOME
-Shell. It reports percentage, charging state, and USB or 2.4 GHz connection.
+The mouse works with stock firmware. **The keyboard requires the experimental
+custom firmware patch** described in [the keyboard guide](research/KEYBOARD.md).
+The installer never flashes firmware.
 
-## Install
+## Console — no Vitals or tray app required
 
-Requires Linux with GNOME, [Vitals](https://github.com/corecoding/Vitals), Python 3,
-Python GObject bindings (`gi`), systemd, udev, and `gnome-extensions`.
-The integration has been tested against the installed Vitals 86 source and
-GNOME 51 environment; live service activation and panel rendering still require
-verification on the host desktop.
+Clone this repository and run Python 3:
+
+```sh
+python3 battery.py
+python3 battery.py --device keyboard
+python3 battery.py --device mouse --json
+```
+
+The command queries devices directly, without a running service, GNOME, Python
+GObject, hidapi, or a GUI. It prints percentage, charging state, connection and
+keyboard voltage. JSON contains readings and errors. Exit status is 1 if any
+requested device is unavailable. Device permissions are still required;
+see [INSTALL.md](INSTALL.md). Wake the devices before querying. The keyboard
+query takes about four seconds to collect receiver push reports.
+
+## Vitals installation
+
+Requires Linux with GNOME, [Vitals](https://github.com/corecoding/Vitals), Python
+3 with `gi`, systemd, udev, and `gnome-extensions`.
 
 ```sh
 git clone https://github.com/nwadams/keychron-vitals.git
@@ -21,81 +36,64 @@ cd keychron-vitals
 /usr/bin/python3 install_vitals.py
 ```
 
-Run the installer **as your desktop user**, in a normal host terminal. It invokes
-sudo only to install/reload a device access rule. Log out and back in afterward
-to load the local Vitals extension. The installer enables Battery and pins
-**Keychron M3 Lite** while preserving your other pinned sensors. It also selects
-**Keychron M3 Lite** under Battery Preferences → Display Battery, so the collapsed
-Battery summary shows the mouse percentage.
+Run as your desktop user; sudo is used only for the narrow device access rule.
+Log out and back in to load changed GNOME Shell modules. The installer enables
+Battery, pins both Keychron percentages while preserving other pins, and selects
+**Keychron K2 HE** under Battery Preferences → Display Battery. Select
+**Keychron M3 Lite** there to use the mouse for the collapsed summary instead.
+A stock/unavailable keyboard shows N/A. Both rows also have a State entry.
 
-See **[INSTALL.md](INSTALL.md)** for dependencies, verification, troubleshooting,
-updates, and removal. Keep the checkout at its installed path: the service runs
-the Python files from that directory.
+The mouse service polls every 30 seconds. A separate keyboard service listens
+for reports and queries wired keyboards about every five seconds. Vitals reads
+atomic local JSON asynchronously, so hardware queries never block Shell.
+Failed polls can retain the last reading for three minutes, marked “last known”;
+expired, malformed or stopped-service data displays N/A.
+
+See [INSTALL.md](INSTALL.md) for setup, updates, verification and removal.
+Keep the checkout at its installed path; the services use absolute paths.
 
 ## Supported hardware
 
-| Device | USB ID | Transport |
+| Device | USB ID | Transport / firmware |
 | --- | --- | --- |
-| M3 Lite through Keychron Link-KM | `3434:d026` | 2.4 GHz receiver |
-| Wired M3 Lite | `3434:d04e` | USB |
+| M3 Lite via Link-KM | `3434:d026` | 2.4 GHz, stock |
+| Wired M3 Lite | `3434:d04e` | USB, stock |
+| K2 HE ANSI via Link-KM | keyboard `3434:0e20`, receiver `3434:d026` | 2.4 GHz, custom patch |
+| Wired K2 HE ANSI | `3434:0e20` | USB, custom patch |
 
-This app uses a protocol previously verified on this mouse and receiver, with
-the battery layout checked against the official Keychron Launcher JavaScript.
-Bluetooth and other Keychron models are not implemented.
+Bluetooth and other keyboard models are not implemented in this integration.
+The keyboard's percentage is a voltage-derived estimate: charging can inflate
+it, and early startup reports can still contain the firmware default. Allow
+sampling to settle and compare the unplugged reading with Fn+B LEDs.
 
-Wired readings take priority. Receiver readings require a confirmed connected
-M3 Lite slot, avoiding old receiver values while the mouse is on USB. If a poll
-fails, the last successful reading can remain for up to three minutes, marked
-“last known” in the State row. Older readings, a stopped service, and malformed
-snapshots display **N/A**. Wake the mouse and close Keychron Launcher if queries
-time out.
+The K2 HE patch was compiled, flashed, read back byte-for-byte and tested
+locally: receiver reports showed 84–85%, 3987–3992 mV, discharging; the user's
+Fn+B LEDs agreed and typing worked. USB reported charging at 4098 mV.
+Details, build/flash/recovery instructions and limitations are in
+[research/KEYBOARD.md](research/KEYBOARD.md). Long-term sleep/wake is untested.
 
-## How it works
+## Related project and contribution
 
-1. `mouse_protocol.py` discovers the vendor HID collection and sends read-only
-   status requests (`B3/03` receiver state; `B3/06` battery).
-2. `battery_service.py` writes `$XDG_RUNTIME_DIR/keychron-battery/status.json`
-   atomically with user-only permissions.
-3. `vitals/keychronBattery.js` adds percentage and state rows to Vitals Battery
-   and supplies its summary when Keychron is selected.
-4. `install_vitals.py` makes a local copy of your installed Vitals extension,
-   adds the reader, and configures the service and pinned sensor.
+[Keyboard Companion](https://github.com/OutersGIT/keyboard-companion) and its
+[K10 HE firmware](https://github.com/OutersGIT/k10he-battery-firmware) provided
+the custom A4 battery protocol and wireless push approach used for this K2 HE
+port. See [our Keyboard Companion fork](https://github.com/nwadams/keyboard-companion)
+for the Linux diagnostic, HID report-length fix and K2 HE validation contribution.
+The Windows tray app was not tested here. Do not flash K10 HE/Q1 HE binaries
+onto a K2 HE.
 
-The system Vitals extension stays on disk. Any pre-existing local Vitals copy is
-backed up before modification. This is a local extension customization: future
-Vitals updates may replace it or be hidden by it. Review the update instructions.
-
-## Protocol
-
-The 64-byte mouse response starts `B4 06`. Byte 20 includes both fields:
-
-```python
-percentage = packet[20] & 0x7f
-charging = bool(packet[20] & 0x80)
-```
-
-Percentages above 100 and malformed packets are rejected. For example, `0x08`
-is 8% discharging and `0x8B` is 11% charging. No configuration, pairing, or
-firmware commands are sent. Source metadata is in
-[protocol-evidence.json](protocol-evidence.json). The referenced public vendor
-bundle is not redistributed.
-
-## Development and validation
+## Development
 
 ```sh
 python3 -m unittest discover -s tests -v
 ```
 
-Tests cover battery/charge decoding, packet boundaries, wired priority,
-receiver connection checks, permission failures, cache expiry, atomic output,
-idempotent Vitals patching, and the real asynchronous GJS reader. GJS checks are
-skipped when `gjs` is absent; the installed-extension check is skipped if Vitals
-is absent. Tests do not need mouse hardware or root. The included CI runs Python
-and GJS checks.
+Tests cover mouse decoding and receiver checks, keyboard A4 decoding, charging,
+cache expiry, atomic files, upgrades from older Vitals hooks, and real async GJS
+reads for both summary selections. GJS checks skip when GJS is absent; hardware
+is not required. See [protocol-evidence.json](protocol-evidence.json) for the
+mouse protocol source. No configuration/pairing commands are used for polling.
 
-The existing hardware captures used to establish the protocol predate this
-app. The automated tests simulate device replies; they do not claim a live
-end-to-end hardware or desktop test of this integration.
-
-MIT licensed. Vitals retains its own license; the installer copies the user's
-installed extension locally rather than distributing it in this repository.
+App code is MIT licensed. The firmware patch is GPL-2.0-or-later; see
+[research/firmware/LICENSE](research/firmware/LICENSE). Vitals retains its own
+license and is copied locally by the installer rather than redistributed.

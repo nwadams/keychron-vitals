@@ -1,0 +1,194 @@
+diff --git a/keyboards/keychron/common/keychron_raw_hid.c b/keyboards/keychron/common/keychron_raw_hid.c
+index b3657af..f638810 100644
+--- a/keyboards/keychron/common/keychron_raw_hid.c
++++ b/keyboards/keychron/common/keychron_raw_hid.c
+@@ -18,6 +18,11 @@
+ #include "keychron_common.h"
+ #include "keychron_raw_hid.h"
+ #include "raw_hid.h"
++#ifdef K2_HE_BATTERY_TELEMETRY
++#    include "usb_descriptor.h"
++#    include "transport.h"
++#    include "battery.h"
++#endif
+ #include "version.h"
+ #include "language.h"
+ #ifdef FACTORY_TEST_ENABLE
+@@ -72,6 +77,9 @@ void get_support_feature(uint8_t *data) {
+         ;
+ 
+     data[2] = (FEATURE_QUICK_START | FEATURE_NKRO) >> 8;
++#    ifdef K2_HE_BATTERY_TELEMETRY
++    data[2] |= FEATURE_BATTERY >> 8;
++#    endif
+ }
+ 
+ #    ifdef ANANLOG_MATRIX
+@@ -128,6 +136,27 @@ void kc_raw_hid_send(uint8_t src, uint8_t *data, uint8_t len) {
+ #    endif
+ }
+ 
++#    ifdef K2_HE_BATTERY_TELEMETRY
++/* Compatible with Keyboard Companion's custom A4 format.
++ * model_id remains 0 (unspecified); no model id is allocated upstream for K2 HE. */
++static void kc_battery_report(uint8_t *data) {
++    uint16_t voltage = battery_get_voltage();
++    data[0] = KC_GET_BATTERY;
++    data[1] = battery_get_percentage();
++    data[2] = voltage & 0xFF;
++    data[3] = voltage >> 8;
++    data[4] = battery_get_charging_state();
++    data[5] = get_transport();
++    data[6] = 0;
++}
++
++void kc_battery_push(void) {
++    uint8_t data[RAW_EPSIZE] = {0};
++    kc_battery_report(data);
++    kc_raw_hid_send(RAW_HID_SRC_WIRELESS, data, sizeof(data));
++}
++#    endif
++
+ bool kc_raw_hid_rx(uint8_t src, uint8_t *data, uint8_t length) {
+ #    if defined(ANANLOG_MATRIX) && defined(VIA_ENABLE)
+     if (src == RAW_HID_SRC_USB && data[0] == id_get_keyboard_value && data[1] == id_switch_matrix_state) {
+@@ -168,6 +197,13 @@ bool kc_raw_hid_rx(uint8_t src, uint8_t *data, uint8_t length) {
+             data[2] = get_highest_layer(layer_state);
+             break;
+ 
++#    ifdef K2_HE_BATTERY_TELEMETRY
++        case KC_GET_BATTERY:
++            if (length < 7) return false;
++            kc_battery_report(data);
++            break;
++#    endif
++
+         case KC_MISC_CMD_GROUP:
+             switch (data[1]) {
+                 case MISC_GET_PROTOCOL_VER:
+diff --git a/keyboards/keychron/common/keychron_raw_hid.h b/keyboards/keychron/common/keychron_raw_hid.h
+index e10f659..3180cab 100644
+--- a/keyboards/keychron/common/keychron_raw_hid.h
++++ b/keyboards/keychron/common/keychron_raw_hid.h
+@@ -25,6 +25,9 @@ enum {
+     KC_GET_FIRMWARE_VERSION = 0xA1,
+     KC_GET_SUPPORT_FEATURE  = 0xA2,
+     KC_GET_DEFAULT_LAYER    = 0xA3,
++#ifdef K2_HE_BATTERY_TELEMETRY
++    KC_GET_BATTERY          = 0xA4,
++#endif
+     KC_MISC_CMD_GROUP       = 0xA7,
+     KC_KEYCHRON_RGB         = 0xA8,
+     KC_ANALOG_MATRIX        = 0xA9,
+@@ -45,6 +48,9 @@ enum {
+     // Byte 1
+     FEATURE_QUICK_START         = 0x01U << 8,
+     FEATURE_NKRO                = 0x01U << 9,
++#ifdef K2_HE_BATTERY_TELEMETRY
++    FEATURE_BATTERY             = 0x01U << 10,
++#endif
+ };
+ 
+ enum {
+@@ -86,3 +92,7 @@ enum {
+ };
+ 
+ void kc_raw_hid_send(uint8_t src, uint8_t *data, uint8_t len);
++
++#ifdef K2_HE_BATTERY_TELEMETRY
++void kc_battery_push(void);
++#endif
+diff --git a/keyboards/keychron/common/wireless/battery.c b/keyboards/keychron/common/wireless/battery.c
+index edc99b6..ef04315 100644
+--- a/keyboards/keychron/common/wireless/battery.c
++++ b/keyboards/keychron/common/wireless/battery.c
+@@ -158,6 +158,16 @@ uint8_t battery_get_percentage(void) {
+         return 0;
+ }
+ 
++#ifdef K2_HE_BATTERY_TELEMETRY
++uint8_t battery_get_charging_state(void) {
++#    if defined(BAT_CHARGING_PIN)
++    if (usb_power_connected())
++        return gpio_read_pin(BAT_CHARGING_PIN) == BAT_CHARGING_LEVEL ? BAT_CHARGING : BAT_FULL_CHARGED;
++#    endif
++    return BAT_NOT_CHARGING;
++}
++#endif
++
+ bool battery_is_empty(void) {
+     return bat_empty > BATTERY_EMPTY_COUNT;
+ }
+@@ -197,7 +207,13 @@ void battery_timer_reset(void) {
+ 
+ void battery_task(void) {
+     uint32_t t = rtc_timer_elapsed_ms(bat_monitor_timer_buffer);
+-    if ((get_transport() & TRANSPORT_WIRELESS) && (wireless_get_state() == WT_CONNECTED || battery_power_on_sample())) {
++    bool monitor_voltage = (get_transport() & TRANSPORT_WIRELESS) &&
++                           (wireless_get_state() == WT_CONNECTED || battery_power_on_sample());
++#ifdef K2_HE_BATTERY_TELEMETRY
++    /* Keep the voltage fresh while connected over USB cable. */
++    monitor_voltage |= get_transport() == TRANSPORT_USB && usb_power_connected();
++#endif
++    if (monitor_voltage) {
+ #if defined(BAT_CHARGING_PIN)
+         if (usb_power_connected() && t > VOLTAGE_MEASURE_INTERVAL) {
+             if (gpio_read_pin(BAT_CHARGING_PIN) == BAT_CHARGING_LEVEL)
+diff --git a/keyboards/keychron/common/wireless/battery.h b/keyboards/keychron/common/wireless/battery.h
+index b2c572e..495eeb7 100644
+--- a/keyboards/keychron/common/wireless/battery.h
++++ b/keyboards/keychron/common/wireless/battery.h
+@@ -55,6 +55,9 @@ void     battery_calculate_voltage(bool vol_src_bt, uint16_t value);
+ void     battery_set_voltage(uint16_t value);
+ uint16_t battery_get_voltage(void);
+ uint8_t  battery_get_percentage(void);
++#ifdef K2_HE_BATTERY_TELEMETRY
++uint8_t  battery_get_charging_state(void);
++#endif
+ bool     battery_is_empty(void);
+ bool     battery_is_critical_low(void);
+ bool     battery_power_on_sample(void);
+diff --git a/keyboards/keychron/k2_he/config.h b/keyboards/keychron/k2_he/config.h
+index 5fe87f0..9fae635 100644
+--- a/keyboards/keychron/k2_he/config.h
++++ b/keyboards/keychron/k2_he/config.h
+@@ -18,6 +18,9 @@
+ 
+ #include "eeconfig_kb.h"
+ 
++/* Experimental host battery telemetry; custom Keyboard Companion A4 protocol. */
++#define K2_HE_BATTERY_TELEMETRY
++
+ /* External EEPROM Configuration*/
+ #define I2C_DRIVER I2CD3
+ #define I2C1_SCL_PIN A8
+diff --git a/keyboards/keychron/k2_he/k2_he.c b/keyboards/keychron/k2_he/k2_he.c
+index 3ac31eb..e9b1692 100644
+--- a/keyboards/keychron/k2_he/k2_he.c
++++ b/keyboards/keychron/k2_he/k2_he.c
+@@ -15,6 +15,10 @@
+  */
+ 
+ #include "keychron.h"
++#ifdef K2_HE_BATTERY_TELEMETRY
++#    include "keychron_raw_hid.h"
++static uint32_t battery_push_timer;
++#endif
+ 
+ #ifndef POWER_ON_LED_DURATION
+ #    define POWER_ON_LED_DURATION 3000
+@@ -40,6 +44,14 @@ void keyboard_post_init_kb(void) {
+ }
+ 
+ void keychron_task_kb(void) {
++#ifdef K2_HE_BATTERY_TELEMETRY
++    /* Dongle host-to-keyboard requests may not be bridged: push instead. */
++    if (get_transport() == TRANSPORT_P2P4 && wireless_get_state() == WT_CONNECTED &&
++        timer_elapsed32(battery_push_timer) >= 2000) {
++        battery_push_timer = timer_read32();
++        kc_battery_push();
++    }
++#endif
+     if (power_on_indicator_timer) {
+         if (timer_elapsed32(power_on_indicator_timer) > POWER_ON_LED_DURATION) {
+             power_on_indicator_timer = 0;

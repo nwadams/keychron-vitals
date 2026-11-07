@@ -38,18 +38,20 @@ cd keychron-vitals
 Do not run the entire installer with sudo. It performs these changes:
 
 - Installs a local Vitals copy in
-  `~/.local/share/gnome-shell/extensions/Vitals@CoreCoding.com` with two new
-  Battery rows. Existing local Vitals files are backed up under
+  `~/.local/share/gnome-shell/extensions/Vitals@CoreCoding.com` with mouse and keyboard
+  percentage/State rows. Existing local Vitals files are backed up under
   `~/.local/state/keychron-battery/extension-backup`.
 - Installs `~/.config/systemd/user/keychron-battery.service` and enables it for
-  the graphical session. It polls every 30 seconds without root.
+  the graphical session. The mouse polls every 30 seconds without root. A second unit,
+  `keychron-keyboard-battery.service`, collects custom keyboard reports about
+  every five seconds.
 - Installs `/etc/udev/rules.d/70-keychron-m3-battery.rules` using sudo and
   reloads/retriggers udev so the active local user gets HID access. The rule
   targets Link-KM mouse interface 01 and the wired M3 Lite USB ID.
 - Enables Vitals Battery and adds `_battery_keychron_m3_lite_` to its pinned
-  sensors. Other pinned sensors are retained. It adds and selects **Keychron M3
-  Lite** in Battery Preferences → Display Battery, which makes the collapsed
-  Battery summary show the mouse percentage.
+  sensors. Other pinned sensors are retained. It adds both devices and selects **Keychron K2
+  HE** in Battery Preferences → Display Battery, which makes the collapsed
+  Battery summary show the keyboard percentage.
 
 The receiver vendor collection shares a HID interface with additional reports;
 as with other HID utilities, granting device access grants access to that
@@ -59,11 +61,10 @@ interface. The service uses only the mouse status and connection queries.
 extension copy; toggling the already-loaded extension may retain old modules.
 No reboot is required. If HID access still fails, reconnect the receiver.
 
-In Vitals, open **Battery**. You should see **Keychron M3 Lite** and
-**Keychron M3 Lite State**. The percentage is automatically pinned to the top
+In Vitals, open **Battery**. You should see **Keychron M3 Lite**, **Keychron K2 HE**, and their State rows. The percentage is automatically pinned to the top
 bar; click its Vitals row to change that preference. Battery Preferences →
-Display Battery includes **Keychron M3 Lite**; selecting it uses the mouse
-percentage for the Battery summary. Built-in battery choices retain their
+Display Battery includes **Keychron M3 Lite** and **Keychron K2 HE**; selecting either uses that
+device percentage for the Battery summary. Built-in battery choices retain their
 existing behavior.
 
 For file preparation without sudo, D-Bus, or service activation:
@@ -79,7 +80,7 @@ Then run the installer without flags on the host desktop to activate it.
 Wake the mouse and close Keychron Launcher before checking:
 
 ```sh
-systemctl --user status keychron-battery.service
+systemctl --user status keychron-battery.service keychron-keyboard-battery.service
 cat "$XDG_RUNTIME_DIR/keychron-battery/status.json"
 /usr/bin/python3 battery_service.py --once
 ```
@@ -133,7 +134,7 @@ For an app update, keep the checkout in place:
 ```sh
 git pull --ff-only
 /usr/bin/python3 install_vitals.py
-systemctl --user restart keychron-battery.service
+systemctl --user restart keychron-battery.service keychron-keyboard-battery.service
 ```
 
 Log out and back in if JavaScript changed. The service uses an absolute checkout
@@ -157,3 +158,25 @@ if installation added it. Log out and back in afterward.
 If you only staged files and never activated, use the same uninstaller. When
 the service was never loaded, a harmless “unit does not exist” message may
 appear.
+
+## Keyboard firmware and console use
+
+The keyboard needs the experimental K2 HE ANSI firmware patch. Follow
+[research/KEYBOARD.md](research/KEYBOARD.md) for pinned sources, build, hardware
+verification, flash backup, and recovery. Stock firmware returns unsupported
+for the custom A4 getter. Installing this app never flashes the keyboard.
+
+For direct readings without Vitals, GNOME or any background service:
+
+```sh
+python3 battery.py
+python3 battery.py --device keyboard --json
+```
+
+Python's standard library is sufficient. HID permissions are still required.
+The receiver keyboard vendor collection is USB interface 03; the mouse is 01.
+The device rule grants access only to the supported device/interface ids.
+After changing the rule, reload/retrigger udev or reconnect the devices.
+The keyboard service writes `$XDG_RUNTIME_DIR/keychron-battery/keyboard-status.json`.
+Check that file and `journalctl --user -u keychron-keyboard-battery.service` if
+keyboard rows are N/A. Existing mouse readings are independent.
