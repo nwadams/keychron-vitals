@@ -1,0 +1,21 @@
+{
+  "source_url": "https://launcher.keychron.com/main.7b33a86947f3bd52.js",
+  "sha256": "0dd7ae0cf1848ace5a2d0db45e61c530152ab6eb239aa5b193009f50b19b6508",
+  "power_parser_character_offsets": [
+    712884,
+    727518
+  ],
+  "power_parser": "Vn={value:127&Oe[19],state:Oe[19]>>7&1}",
+  "request_payload": [
+    6
+  ],
+  "request_report_id": 179,
+  "response_report_id": 180,
+  "hidraw_battery_offset": 20,
+  "percentage_mask": 127,
+  "charging_mask": 128,
+  "receiver_state_request_payload": [
+    3
+  ],
+  "receiver_state_report_id": 179
+}

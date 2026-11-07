@@ -1,0 +1,4 @@
+# Run before 73-seat-late.rules so logind applies the active user's ACL.
+# Link-KM vendor mouse interface observed on this receiver: USB interface 01.
+ACTION=="add|change", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3434", ATTRS{idProduct}=="d026", ENV{ID_USB_INTERFACE_NUM}=="01", TAG+="uaccess"
+ACTION=="add|change", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3434", ATTRS{idProduct}=="d04e", TAG+="uaccess"
