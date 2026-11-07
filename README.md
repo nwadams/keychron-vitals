@@ -8,6 +8,8 @@ The mouse works with stock firmware. **The keyboard requires the experimental
 custom firmware patch** described in [the keyboard guide](research/KEYBOARD.md).
 The installer never flashes firmware.
 
+![Vitals Battery menu showing Keychron K2 HE at 82% and Keychron M3 Lite at 90%](docs/images/vitals-batteries.png)
+
 ## Console — no Vitals or tray app required
 
 Clone this repository and run Python 3:
@@ -16,6 +18,13 @@ Clone this repository and run Python 3:
 python3 battery.py
 python3 battery.py --device keyboard
 python3 battery.py --device mouse --json
+```
+
+Example output:
+
+```text
+Keychron M3 Lite: 90% — Discharging, 2.4GHz receiver
+Keychron K2 HE: 82% — Discharging, 2.4GHz receiver, 3967 mV
 ```
 
 The command queries devices directly, without a running service, GNOME, Python
