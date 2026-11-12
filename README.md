@@ -36,6 +36,11 @@ query takes about four seconds to collect receiver push reports.
 
 ## Vitals installation
 
+For **niri with DMS**, both device readings appear inside the existing
+Battery view, with charging and connection details and no separate bar icon.
+See
+[niri / DMS integration](dms/README.md) for prerequisites and removal.
+
 Requires Linux with GNOME, [Vitals](https://github.com/corecoding/Vitals), Python
 3 with `gi`, systemd, udev, and `gnome-extensions`.
 
